@@ -1,0 +1,39 @@
+# database/connection.py
+import sqlite3
+import os
+from utils.security import gerar_hash_senha
+
+DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'angelicia.db')
+
+def conectar():
+    """Retorna uma conexão com o banco de dados SQLite."""
+    return sqlite3.connect(DATABASE_PATH)
+
+def inicializar_banco():
+    """Cria as tabelas iniciais do sistema e o usuário Root se não existirem."""
+    conn = conectar()
+    cursor = conn.cursor()
+    
+    # 1. Tabela de Usuários
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        perfil TEXT NOT NULL
+    )
+    """)
+    
+    # 2. Criando o usuário ROOT padrão (Caso o banco seja novo)
+    cursor.execute("SELECT * FROM usuarios WHERE perfil = 'root'")
+    if not cursor.fetchone():
+        # Senha padrão que você usará no primeiro acesso (mude depois se quiser)
+        senha_root_hash = gerar_hash_senha("AngeliciaRoot2026")
+        cursor.execute(
+            "INSERT INTO usuarios (username, password_hash, perfil) VALUES (?, ?, ?)",
+            ("admin_root", senha_root_hash, "root")
+        )
+        conn.commit()
+        print("[DATABASE] Usuário Master 'admin_root' criado com sucesso!")
+    
+    conn.close()
